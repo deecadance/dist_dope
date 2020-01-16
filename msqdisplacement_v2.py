@@ -2,10 +2,10 @@
 import numpy as np
 import math
 import sys
-supercell_size = [4,1,2]
+supercell_size = [4,1,4]
 filename = 'POSCAR_0GPa_BH2'
 src = filename + '_0pc_src_4'
-dest = filename + '_0pc_src_32'
+dest = filename + '_0pc_src_64.vasp'
 
 
 with open(src) as sourcefile:
@@ -58,10 +58,12 @@ def euclide(atom1, atom2):
 
 supercell_param = np.array(supercell_size)
 ## THE ORIGINAL CELL WILL BE TRANSLATED BY AN AMOUNT EQUAL TO A FRACTION OF THE NEW AXES ##
-unit_latt = (dest_latt/supercell_param)
+unit_latt = (dest_latt.T/supercell_param).T
 ## DIFFERENCE OF THE LATTICES (fraction of doped cell and original cell)
 ##print(unit_latt - src_latt)
-
+##w1=1.0
+##w2=1-w1
+##unit_latt = (w1*unit_latt + w2*src_latt)/(w1+w2)
 
 ### ITERATION ON SUPERCELLS ###
 delta_u = 0.000
@@ -72,17 +74,36 @@ for iter_x in range(supercell_size[0]):
             ### TRANSLATION OF THE ORIGIN OF THE ATOMS
             ### EQUAL TO: cell sublattice times supercell factors 
 ##            print(unit_latt*[iter_x, iter_y, iter_z])
-            origin = sum(np.array(unit_latt.T * np.array([iter_x, iter_y, iter_z]), dtype=np.float32).T)
+#            print(unit_latt)
+##            print(unit_latt.T)
+            origin_matrix = np.array(unit_latt.T * np.array([iter_x, iter_y, iter_z]), dtype=np.float32).T
+#            print(origin_matrix)
+            origin = sum(origin_matrix)
 ##            print(origin)
             ### DEFINE GROUPS OF COORDINATES ###
             ### GROUPS for translated cell
-            group_1 = src_group_1 @ unit_latt + origin
-            group_2 = src_group_2 @ unit_latt + origin
-            group_3 = src_group_3 @ unit_latt + origin
+            group_1 = src_group_1 @ unit_latt + origin 
+            group_2 = src_group_2 @ unit_latt + origin 
+            group_3 = src_group_3 @ unit_latt + origin 
+            mask_a = ( group_1 >= (sum(unit_latt + origin_matrix)))
+            mask_b = ( group_1 <= (origin))
+            group_1[mask_a] = group_1[mask_a] - 1
+            group_1[mask_b] = group_1[mask_b] + 1
+            mask_a = ( group_2 >= (sum(unit_latt + origin_matrix) ))
+            mask_b = ( group_2 <= (origin))
+            group_2[mask_a] = group_2[mask_a] - 1
+            group_2[mask_b] = group_2[mask_b] + 1
+            mask_a = ( group_3 >= (sum(unit_latt + origin_matrix) ))
+            mask_b = ( group_3 <= (origin))
+            group_3[mask_a] = group_3[mask_a] - 1
+            group_3[mask_b] = group_3[mask_b] + 1
+
             ### D_GROUPS for doped cell
             d_group_1 = dest_group_1 @ dest_latt
             d_group_2 = dest_group_2 @ dest_latt
             d_group_3 = dest_group_3 @ dest_latt
+##            print(group_1)
+##            print(d_group_1)
             ### NOW FOR EACH GROUP FIND THE MATCHING COORDINATES USING EUCLIDEAN DISTANCE
             for atom1 in group_1:
                 min_dist = math.inf
@@ -91,7 +112,7 @@ for iter_x in range(supercell_size[0]):
                     if dist < min_dist:
                         min_dist = dist
                 delta_u += min_dist
-#                print(min_dist)
+ #               print(min_dist)
             for atom1 in group_2:
                 min_dist = math.inf
                 for atom2 in d_group_2:
