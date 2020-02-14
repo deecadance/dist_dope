@@ -108,7 +108,7 @@ unit_latt = (dest_latt.T/supercell_param).T
 ##w2=1-w1
 ##unit_latt = (w1*unit_latt + w2*src_latt)/(w1+w2)
 
-### ITERATION ON SUPERCELLS ###
+### ITERATION ON SUBCELLS ###
 delta_u = 0.000
 for iter_x in range(supercell_size[0]):
     for iter_y in range(supercell_size[1]):
